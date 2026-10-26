@@ -239,6 +239,15 @@ Default log types: **disk** → event, traffic, app-ctrl, ips, virus, webfilter,
 
 Without `--logwatch-eventids` or `--logwatch-actions`, severity is derived from log level: `emergency/alert/critical` → CRITICAL, `error/warning` → WARNING. Each type is prefetched in parallel; types returning 404 are silently skipped.
 
+### HTTPS Options
+
+| Option | Default | Description |
+|--------|---------|-------------|
+| `--https-port` | 443 | HTTPS/API port |
+| `--https-verify` | - | Require validation of the HTTPS server certificate |
+| `--https-ca-bundle` | - | CA bundle file to validate device API server certificate instead of system default.  Implies `--https-verify`. |
+
+
 ### SNMP Options
 
 | Option | Default | Description |

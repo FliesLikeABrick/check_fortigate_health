@@ -224,6 +224,12 @@ Options:
     Hostname or IP address of the FortiGate
  -T, --token <token>
     API token (FortiGate GUI: System > Administrators > Create New > REST API Admin)
+ --https-port <port>
+    HTTPS/API port (default: 443)
+ --https-verify <port>
+    Require validation of the HTTPS server certificate
+ --https-ca-bundle <port>
+    CA bundle file to validate device API server certificate instead of system default.  Implies --https-verify.
  -SC, --snmp-community <community>
     SNMP v2c community string - enables SNMP-based resource/uptime collection
     (uses FORTINET-FORTIGATE-MIB OIDs; requires snmpget)
@@ -541,6 +547,17 @@ while [[ -n "${1}" ]]; do
 	--snmp-port)
 		shift
 		snmp_port="${1}"
+		;;
+	--https-port)
+		shift
+		https_port="${1}"
+		;;
+	--https-verify)
+		https_verify=1
+		;;
+	--https-ca-bundle)
+		shift
+		https_ca_bundle="${1}"
 		;;
 	-U|--username)
 		shift
@@ -1236,6 +1253,7 @@ done
 [[ -z "${warn_logwatch}" ]]    && warn_logwatch=1
 [[ -z "${crit_logwatch}" ]]    && crit_logwatch=-1
 [[ -z "${snmp_port}" ]]     && snmp_port=161
+[[ -z "${https_port}" ]]     && https_port=443
 
 # SNMPv3 USM enforces a minimum passphrase length of 8 characters.
 # Catch this early so the user gets a clear error instead of silent empty results.
@@ -1312,7 +1330,16 @@ status_crit="[CRITICAL]"
 status_unkn="[UNKNOWN]"
 
 # Curl option block - --insecure for self-signed FortiGate certificates
-CURL_OPTS="--insecure --silent --max-time 15"
+# A bundle being specified will enable cerficiate verification/validation
+if [[ -n "${https_ca_bundle}" ]]; then
+    export CURL_CA_BUNDLE="${https_ca_bundle}"
+    https_verify=1
+fi
+
+CURL_OPTS="--silent --max-time 15"
+if [[ -z "${https_verify}" ]]; then
+    CURL_OPTS="--insecure $CURL_OPTS"
+fi
 
 fg_output=""
 fg_problem_output=""
@@ -1326,7 +1353,10 @@ fi
 # ---------------------------------------------------------------------------
 # Base URL
 # ---------------------------------------------------------------------------
-FG_API="https://${fg_host}/api/v2"
+if [[ -n "${https_port}" ]]; then
+    HTTPS_PORT_STR=":${https_port}"
+fi
+FG_API="https://${fg_host}${HTTPS_PORT_STR}/api/v2"
 
 # ---------------------------------------------------------------------------
 # Authentication - API token, username/password, or SNMP-only (no REST API)
