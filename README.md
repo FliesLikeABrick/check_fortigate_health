@@ -244,7 +244,7 @@ Without `--logwatch-eventids` or `--logwatch-actions`, severity is derived from 
 | Option | Default | Description |
 |--------|---------|-------------|
 | `--https-port` | 443 | HTTPS/API port |
-| `--https-verify` | false | Require validation of the HTTPS server certificate |
+| `--https-verify` | - | Require validation of the HTTPS server certificate |
 | `--https-ca-bundle` | - | CA bundle file to validate device API server certificate instead of system default.  Implies `--https-verify`. |
 
 
