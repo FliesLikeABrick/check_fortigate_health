@@ -1332,7 +1332,7 @@ status_unkn="[UNKNOWN]"
 # Curl option block - --insecure for self-signed FortiGate certificates
 # A bundle being specified will enable cerficiate verification/validation
 if [[ -n "${https_ca_bundle}" ]]; then
-    CURL_CA_BUNDLE="${https_ca_bundle}"
+    export CURL_CA_BUNDLE="${https_ca_bundle}"
     https_verify=1
 fi
 
