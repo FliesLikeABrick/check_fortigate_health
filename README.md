@@ -287,7 +287,9 @@ The script supports using FortiManager to proxy API commands to firewalls.  This
 
 The target firewall specified by `--fmg-device` is of the format `adom/ADOM/device/DEVICE_NAME`.  A list of available device paths can be printed by running the script with `--print-fmg-device-paths`.  
 
-FortiManager is used as a proxy for API access, using the `/jsonrpc` JSON RPC endpoint offered by FortiManager, specifically the RPC path `/sys/json/proxy`.  A FortiManager REST Admin account can be used for token authentication, or a normal administrator account with username/password authentication.  In either case, the account must be configured with "JSON API Access" set to a value other than `None`.  "Read" is the suggested value, along with an admin profile that restricts the account to the privileges appropriate for your use case.
+FortiManager is used as a proxy for API access, using the `/jsonrpc` JSON RPC endpoint offered by FortiManager, specifically the RPC path `/sys/json/proxy`.  A FortiManager REST Admin account can be used for token authentication, or a normal administrator account with username/password authentication.  In either case, the account must be configured with "JSON API Access" set to a value other than `None`.  `Read` is the suggested value, along with an admin profile that restricts the account to the privileges appropriate for your use case.
+
+Thresholds, outputs and other behavior is identical regardless of whether the firewall API is accessed directly or via FortiManager.
 
 ## Examples
 
@@ -381,6 +383,17 @@ Alert if the firewall has been up for less than 30 minutes:
 ```bash
 ./check_fortigate_health.sh -H 10.0.0.1 -T MyApiToken123 -A \
   --disable-sensors --disable-fwstats --no-perfdata
+```
+
+### Full Check, Suppress Noisy Modules (via FortiManager and HTTPS customization)
+```bash
+./check_fortigate_health.sh -H 10.0.0.1 -T MyApiToken123 -A \
+  --disable-sensors --disable-fwstats --no-perfdata --fmg-device=adom/PROD76/device/HQ-FW01 --https-verify --https-port 4443 --https-ca-bundle /etc/certs/ca.bundle
+```
+
+### Query FortiManager Available Devices (with HTTPS cusomization)
+```bash
+./check_fortigate_health.sh  --https-verify --https-port 4443 --https-ca-bundle /etc/certs/ca.bundle   -H 10.0.0.1  -U "monitoring.ro" -P 'secret.password'   --print-fmg-device-paths 
 ```
 
 ### SNMP-Only Mode (No REST API)
