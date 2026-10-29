@@ -68,7 +68,7 @@
 #                    --api-token which retains -T); --max-parallel <N> (default 5)
 #                    caps concurrent prefetch jobs to prevent device webserver overload
 #                    under -A; same guard applied to shaper monitor background fetches
-# 2.10.4 2026-10-01  Fix ntp wrong offet
+# 2.10.4 2026-10-01  Fix ntp wrong offset
 # 2.10.5 2026-10-01  added --blacklist-ap for Blacklist Access Points
 #                    added --whitelist-ap for Whitelist Access Points
 #        2026-10-26  added --https-port, --https-verify, --https-ca-bundle
@@ -280,7 +280,7 @@ Options:
  --https-ca-bundle <port>
     CA bundle file to validate device API server certificate instead of system default.  Implies --https-verify.
  --fmg-device  <fortimanager device>
-    Use this fortimanager device path to proxy API access through FortiManager.  Requires --token.  If used, the hostname provided will instead be used as the fortimanager hostname
+    Use this FortiManager device path to proxy API access through FortiManager.  Requires -T, or -U+-P.  The -H hostname and authentication details will be used to instead access the FortiManager API
  -SC, --snmp-community <community>
     SNMP v2c community string - enables SNMP-based resource/uptime collection
     (uses FORTINET-FORTIGATE-MIB OIDs; requires snmpget)
@@ -1190,7 +1190,7 @@ done
 [[ -z "${fg_host}" ]] && exit_unknown "FortiGate hostname or IP (-H) is required!"
 [[ -z "${api_token}" && ( -z "${api_user}" || -z "${api_pass}" ) && -z "${snmp_community}" && -z "${snmp_user}" ]] && \
 	exit_unknown "Authentication required: -T <api_token>  OR  -U <user> -P <pass>  OR  --snmp-community / --snmp-user (SNMP-only mode)"
-[[ -n "${print_fmg_device_paths}" && ( ! ( -n "${api_token}" || ( -n "${api_user}" || -n "${api_pass}" ) ) || -z "${fg_host}}" ) ]] && exit_unknown "FortiManager hostname/IP (-H) is required along with API token (--token) or username/password (-P/-U) to retrieve and print available FortiGate device paths"
+[[ -n "${print_fmg_device_paths}" && ( ! ( -n "${api_token}" || ( -n "${api_user}" || -n "${api_pass}" ) ) || -z "${fg_host}}" ) ]] && exit_unknown "FortiManager hostname/IP (-H) is required along with API token (-T) or username/password (-P/-U) to retrieve and print available FortiGate device paths"
 
 # If no explicit enable flags -> enable all (opt-out mode via --disable-X)
 [[
@@ -1432,12 +1432,12 @@ FMG_API="https://${fg_host}${HTTPS_PORT_STR}/jsonrpc"
 
 # ---------------------------------------------------------------------------
 # Authentication - API token, username/password, or SNMP-only (no REST API)
-# If fmg_device is specified, then  fg_host is actually fortimanager being used 
-# as a proxy to access fmg_device.  The token and FG_API are instead used 
+# If fmg_device is specified, then  fg_host is actually FortiManager being used
+# as a proxy to access fmg_device.  The token (or user/pass) and FMG_API are instead used
 # for FortiManager
 # ---------------------------------------------------------------------------
 if [[ -n "${fmg_api_required}"  && -n "${api_user}" && -n "${api_pass}" ]]; then
-    # retrieve a session token
+    # If FMG API is required and user/pass creds were provided, retrieve a session token; stored globally
     fmg_login_payload=$(${JQ} -n \
         --arg user "${api_user}" \
         --arg password "${api_pass}" \
@@ -1456,7 +1456,9 @@ if [[ -n "${fmg_api_required}"  && -n "${api_user}" && -n "${api_pass}" ]]; then
     api_session=$(${CURL} ${CURL_OPTS} -X POST -H "Content-Type: application/json" -d "${fmg_login_payload}" ${FMG_API} | ${JQ} '.session' )
 fi
 
+# Conditionally define fg_api_get() based on authentication and FortiManager use
 if [[ -n "${fmg_api_required}" ]]; then
+    # FortiManager; requires bearer token or session token (from user/password auth) to be available
     # sanity check
     if [[ -z "${api_token}" && -z "${api_session}" ]]; then
         exit_unknown "FortiManager API access is required but a valid token was not provided and no session could be created from username/password"
@@ -1479,13 +1481,16 @@ if [[ -n "${fmg_api_required}" ]]; then
             }')
         # the ultimate target firewall's payload is wrapped in the fgm result=>data=> response data structure
         if [[ -n "${api_token}" ]]; then
+            # bearer token
             ${CURL} ${CURL_OPTS} -X POST -H "Content-Type: application/json" -d "${fmg_payload}" -H "Authorization: Bearer ${api_token}" "${FMG_API}" | ${JQ} '.result[0].data[0].response'
         else
+            # session token; requires extending the JSON payload
             fmg_payload=$(${JQ} -n --arg session "${api_session}" --argjson fmg_payload "${fmg_payload}" '$fmg_payload + {("session"): $session}')
             ${CURL} ${CURL_OPTS} -X POST -H "Content-Type: application/json" -d "${fmg_payload}" "${FMG_API}" | ${JQ} '.result[0].data[0].response'
         fi
     }
 elif [[ -n "${api_token}" ]]; then
+    # Token auth to FortiGate directly
 	fg_api_get() {
 		${CURL} ${CURL_OPTS} -X GET -H "Authorization: Bearer ${api_token}" "${FG_API}$@"
 	}
@@ -1498,6 +1503,7 @@ elif [[ -z "${api_user}" && ( -n "${snmp_community}" || -n "${snmp_user}" ) ]]; 
 	_snmp_only=1
 	fg_api_get() { :; }
 else
+    # User/password auth to firewall, authenticate to retrieve token
 	_cookie_jar=$(mktemp /tmp/.fg_cookie_XXXXXX)
 	_login_hdr=$(mktemp /tmp/.fg_header_XXXXXX)
 
