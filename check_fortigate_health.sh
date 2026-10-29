@@ -74,9 +74,10 @@
 #        2026-10-26  added --https-port, --https-verify, --https-ca-bundle
 #        2026-10-29  added support for using FortiManager to proxy API access
 #                    to remote FG firewalls.  Added flags --fmg-device and
-#                    --print-fmg-device-paths.  When either is specified,the target
+#                    --print-fmg-device-paths.  When either is specified, the target
 #                    hostname/IP and user/pass/token arguments are repurposed for
-#                    FortiManager's API.
+#                    FortiManager's API.  Both username/password and token auth
+#                    are supported
 
 ## VARIABLES
 PROGNAME="${0##*/}"
